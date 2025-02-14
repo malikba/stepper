@@ -3,12 +3,14 @@ import { ref, watch, onMounted } from 'vue';
 import { useStepper } from '../composables/useStepper';
 import Button from 'primevue/button';
 
-const { setCurrentFlow, setStepData, registerStep, getStepData } = useStepper({ stepperId: 'myStepper' });
+const { setCurrentFlow, setStepData, registerStep, getStepData, validateStepData } = useStepper({ stepperId: 'myStepper' });
 
 const stepData = ref({ name: '' });
 
 watch(stepData, (newData) => {
   setStepData(newData);
+
+  validateStepData({stepIndex: 0, validationCallback: () => Object.values(getStepData()).every(value => value === "malik")});
 }, { deep: true });
 
 onMounted(() => {
@@ -20,6 +22,7 @@ onMounted(() => {
 <template>
   <div>
     <h2>Step 1</h2>
+    <p>Specific validation for step - write "malik" in the input</p>
     <input 
       v-model="stepData.name" 
       placeholder="Enter your name" 

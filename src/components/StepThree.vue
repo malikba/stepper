@@ -2,11 +2,13 @@
 import { ref, watch, onMounted } from 'vue';
 import { useStepper } from '../composables/useStepper';
 
-const { setStepData, registerStep, getStepData } = useStepper({ stepperId: 'myStepper' });
+const { setStepData, registerStep, getStepData, validateStepData } = useStepper({ stepperId: 'myStepper' });
 const stepData = ref({ age: '' });
 
 watch(stepData, (newData) => {
   setStepData(newData);
+
+  validateStepData({stepIndex: 2, validationCallback: () => Object.values(getStepData()).every(value => value !== "")});
 }, { deep: true });
 
 onMounted(() => {

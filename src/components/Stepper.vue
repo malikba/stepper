@@ -20,7 +20,7 @@ const flows = {
 
 const { setFlows,
   getStepData,
-  currentStep,
+  getStepMetadata,
   currentStepComponent,
   currentFlow,
   goToNextStep,
@@ -35,6 +35,8 @@ const { setFlows,
     },
     stepperId: 'myStepper',
   });
+
+
 </script>
 
 <template>
@@ -46,7 +48,7 @@ const { setFlows,
     </div>
     <div>
       <button @click="goToPreviousStep" :disabled="isFirstStep">Previous</button>
-      <button @click="goToNextStep" :disabled="isLastStep">Next</button>
+      <button @click="goToNextStep" :disabled="isLastStep || !getStepMetadata().isValid">Next</button>
     </div>
   </section>
 </template>

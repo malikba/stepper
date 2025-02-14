@@ -83,14 +83,16 @@ export function useStepper({ initialState, stepperId }: StepperOptions) {
   };
 
   // Method to validate step data
-  const isStepDataValid = (stepIndex: number, validationCallback?: () => boolean) => {
+  const validateStepData = ({stepIndex, validationCallback}: {stepIndex?: number, validationCallback?: () => boolean}) => {
+      const indexToValidate = stepIndex ?? state.value.currentStepIndex;
+
       if (validationCallback) {
-        state.value.steps[stepIndex].isValid = validationCallback();
+        state.value.steps[indexToValidate].isValid = validationCallback();
         return validationCallback();
       }
 
-      state.value.steps[stepIndex].isValid = state.value.data[stepIndex] !== undefined && state.value.data[stepIndex] !== null;
-      return state.value.steps[stepIndex].isValid;
+      state.value.steps[indexToValidate].isValid = state.value.data[indexToValidate] !== undefined && state.value.data[indexToValidate] !== null;
+      return state.value.steps[indexToValidate].isValid;
   };
 
   // Method for a step to register itself
@@ -103,7 +105,11 @@ export function useStepper({ initialState, stepperId }: StepperOptions) {
   };
 
   const isLastStep = computed(() => {
-      return state.value.currentStepIndex === state.value.steps.length - 1;
+    if (!state.value.currentFlowKey || !(state.value.flows instanceof Object)) {
+      throw new Error('No default flow defined');
+    }
+
+    return state.value.currentStepIndex === state.value.flows[state.value.currentFlowKey].length - 1;
   });
 
   const isFirstStep = computed(() => {
@@ -164,7 +170,7 @@ export function useStepper({ initialState, stepperId }: StepperOptions) {
 
   return {
       // State (read only)
-      currentStep: getCurrentStepIndex,
+      currentStepIndex: getCurrentStepIndex,
       state: readonly(state),
 
       // Setters
@@ -190,7 +196,7 @@ export function useStepper({ initialState, stepperId }: StepperOptions) {
       currentFlow,
 
       // Validators
-      isStepDataValid,
+      validateStepData,
       isLastStep,
       isFirstStep,
 
