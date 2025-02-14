@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import Stepper from './components/Stepper.vue';
 </script>
 
 <template>
@@ -11,7 +11,8 @@ import HelloWorld from './components/HelloWorld.vue'
       <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
     </a>
   </div>
-  <HelloWorld />
+  <h1>Stepper Demo</h1>
+  <Stepper />
 </template>
 
 <style scoped>

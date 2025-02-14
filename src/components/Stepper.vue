@@ -20,7 +20,7 @@ const flows = {
 
 const { setFlows,
   getStepData,
-  currentStep,
+  isStepValid,
   currentStepComponent,
   currentFlow,
   goToNextStep,
@@ -28,9 +28,10 @@ const { setFlows,
   isLastStep,
   isFirstStep, state } = useStepper({
     initialState: {
-      currentStep: 0,
+      currentStepIndex: 0,
       currentFlowKey: Flows.FLOW1,
       flows,
+      steps: [],
       data: [],
     },
     stepperId: 'myStepper',
@@ -46,7 +47,8 @@ const { setFlows,
     </div>
     <div>
       <button @click="goToPreviousStep" :disabled="isFirstStep">Previous</button>
-      <button @click="goToNextStep" :disabled="isLastStep">Next</button>
+      <button @click="goToNextStep" :disabled="isLastStep || !isStepValid">Next</button>
+      <button @click="onSubmit" :disabled="!isLastStep || !isStepValid">Submit</button>
     </div>
   </section>
 </template>
