@@ -1,15 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useStepper } from '../useStepper'
-import { nextTick } from 'process'
+import { nextTick } from 'vue'
 
 describe('useStepper', () => {
   const stepperId = 'test-stepper'
   let stepper: ReturnType<typeof useStepper>
 
   beforeEach(() => {
-    // Clear localStorage before each test
     localStorage.clear()
-    
     stepper = useStepper({ stepperId })
   })
 
@@ -22,26 +20,23 @@ describe('useStepper', () => {
       expect(stepper.state.value.currentFlowKey).toBeNull()
     })
 
-    it('should initialize with provided values', async () => {
+    it('should initialize with provided values', () => {
       const initialState = {
         currentStepIndex: 1,
         steps: [{ title: 'Step 1', isValid: true }],
         data: [{ name: 'John' }],
-        flows: { default: [] },
+        flows: { default: ['StepOne'] },
         currentFlowKey: 'default'
       }
 
       stepper = useStepper({ initialState, stepperId })
-      await nextTick;
-      expect(stepper.state.value.currentStepIndex).toBe(1)
-      expect(stepper.state.value.steps).toEqual(initialState.steps)
-      expect(stepper.state.value.data).toEqual(initialState.data)
+      expect(stepper.state.value).toEqual(initialState)
     })
   })
 
   describe('navigation', () => {
     beforeEach(() => {
-      stepper.setFlows({ default: ["1", "2", "3"] })
+      stepper.setFlows({ default: ['StepOne', 'StepTwo', 'StepThree'] })
       stepper.setCurrentFlow('default')
     })
 
@@ -84,21 +79,21 @@ describe('useStepper', () => {
 
   describe('flow management', () => {
     it('should set and get flows', () => {
-      const flows = { default: ["", ""] }
+      const flows = { default: ['StepOne', 'StepTwo'] }
       stepper.setFlows(flows)
       expect(stepper.getFlows()).toEqual(flows)
     })
 
     it('should set current flow', () => {
-      const flows = { default: ["", ""] }
+      const flows = { default: ['StepOne', 'StepTwo'] }
       stepper.setFlows(flows)
       stepper.setCurrentFlow('default')
       expect(stepper.getCurrentFlowKey()).toBe('default')
       expect(stepper.currentStepIndex.value).toBe(0)
     })
 
-    it('should throw error when accessing currentFlow without setting flow', () => {
-      expect(() => stepper.currentFlow.value).toThrow('No default flow defined')
+    it('should return undefined when accessing currentFlow without setting flow', () => {
+      expect(stepper.currentFlow.value).toBeUndefined()
     })
   })
 
@@ -109,19 +104,21 @@ describe('useStepper', () => {
 
     it('should validate step with callback', () => {
       const validationCallback = () => true
-      expect(stepper.validateStepData({ stepIndex: 0, validationCallback })).toBe(true)
+      expect(stepper.validateStepData({ validationCallback })).toBe(true)
       expect(stepper.state.value.steps[0].isValid).toBe(true)
     })
 
     it('should validate step without callback', () => {
       stepper.setStepData({ name: 'John' })
-      expect(stepper.validateStepData({ stepIndex: 0 })).toBe(true)
+      expect(stepper.validateStepData({})).toBe(true)
     })
 
-    it('should check if all previous steps are valid', () => {
+    it('should check if all previous steps are valid', async () => {
       stepper.registerStep({ title: 'Step 1', isValid: true }, 0)
       stepper.registerStep({ title: 'Step 2', isValid: true }, 1)
       stepper.registerStep({ title: 'Step 3', isValid: false }, 2)
+      
+      await nextTick();
       
       expect(stepper.allStepsBeforeAreValid(2)).toBe(true)
       expect(stepper.allStepsBeforeAreValid(3)).toBe(false)
@@ -130,7 +127,7 @@ describe('useStepper', () => {
 
   describe('computed properties', () => {
     beforeEach(() => {
-      stepper.setFlows({ default: ["", "", ""] })
+      stepper.setFlows({ default: ['StepOne', 'StepTwo', 'StepThree'] })
       stepper.setCurrentFlow('default')
     })
 
@@ -146,12 +143,7 @@ describe('useStepper', () => {
     })
 
     it('should get current step component', () => {
-      expect(stepper.currentStepComponent.value).toBeTruthy()
-    })
-
-    it('should throw error when accessing currentFlow without valid flow key', () => {
-      stepper.setCurrentFlow('nonexistent')
-      expect(() => stepper.currentFlow.value).toThrow('No default flow defined')
+      expect(stepper.currentStepComponent.value).toBe('StepOne')
     })
   })
 

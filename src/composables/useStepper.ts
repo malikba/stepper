@@ -1,14 +1,36 @@
 import { computed, readonly, ComponentInstance } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
+import { useConfirm } from 'primevue/useconfirm';
 
 interface StepperOptions {
   initialState?: StepperState;
   stepperId: string;
+  globalConfig?: GlobalConfig;
+}
+
+interface ConfirmDialogOptions {
+  enabled: boolean;
+  message?: string;
+  header?: string;
+  acceptLabel?: string;
+  rejectLabel?: string;
+}
+
+interface GlobalConfig {
+  confirmation?: {
+    next?: Partial<ConfirmDialogOptions>;
+    previous?: Partial<ConfirmDialogOptions>;
+  };
 }
 
 interface StepMetadata {
   title: string;
   isValid: boolean;
+  componentName?: string;
+  confirmation?: {
+    next?: Partial<ConfirmDialogOptions>;
+    previous?: Partial<ConfirmDialogOptions>;
+  };
 }
 
 interface StepData {
@@ -29,7 +51,40 @@ interface StepperState {
 
 // TODO - handle modal config
 
-export function useStepper({ initialState, stepperId }: StepperOptions) {
+export function useStepper({ initialState, stepperId, globalConfig }: StepperOptions) {
+  const confirm = useConfirm();
+  
+  const defaultGlobalConfig: Required<GlobalConfig> = {
+    confirmation: {
+      previous: {
+        enabled: false,
+        message: 'Are you sure you want to go back? Your changes may be lost.',
+        header: 'Confirmation',
+        acceptLabel: 'Yes',
+        rejectLabel: 'No'
+      },
+      next: {
+        enabled: false,
+        message: 'Are you sure you want to proceed to the next step?',
+        header: 'Confirmation',
+        acceptLabel: 'Yes',
+        rejectLabel: 'No'
+      }
+    }
+  };
+
+  const config: Required<GlobalConfig> = {
+    confirmation: {
+      previous: {
+        ...defaultGlobalConfig.confirmation.previous,
+        ...(globalConfig?.confirmation?.previous || {})
+      } as ConfirmDialogOptions,
+      next: {
+        ...defaultGlobalConfig.confirmation.next,
+        ...(globalConfig?.confirmation?.next || {})
+      } as ConfirmDialogOptions
+    }
+  };
 
   // Merged state object containing both steps metadata and state data
   const state = useLocalStorage<StepperState>(`stepper_state_${stepperId}`, {
@@ -68,21 +123,77 @@ export function useStepper({ initialState, stepperId }: StepperOptions) {
       return state.value.steps[stepIndex ?? state.value.currentStepIndex];
   };
 
-  const goToNextStep = () => {
-      if (!state.value.currentFlowKey) {
-        return;
-      }
+  const getCurrentStepConfig = computed(() => {
+    const globalConfirmation = config.confirmation;
+    const currentStep = state.value.steps[state.value.currentStepIndex];
+    
+    if (!currentStep) return globalConfirmation;
 
-      if (state.value.currentStepIndex < state.value.flows[state.value.currentFlowKey].length - 1) {
-          state.value.currentStepIndex++;
+    return {
+      next: {
+        ...globalConfirmation.next,
+        ...(currentStep.confirmation?.next || {})
+      },
+      previous: {
+        ...globalConfirmation.previous,
+        ...(currentStep.confirmation?.previous || {})
       }
+    };
+  });
 
+  const goToNextStep = async () => {
+    if (!state.value.currentFlowKey) {
+      return;
+    }
+
+    const currentFlow = state.value.flows[state.value.currentFlowKey];
+    const handleNext = () => {
+      if (state.value.currentStepIndex < currentFlow.length - 1) {
+        state.value.currentStepIndex++;
+      }
+    };
+
+    const stepConfig = getCurrentStepConfig.value;
+    if (stepConfig?.next?.enabled) {
+      confirm.require({
+        message: stepConfig.next.message,
+        header: stepConfig.next.header,
+        icon: 'pi pi-arrow-right',
+        acceptLabel: stepConfig.next.acceptLabel,
+        rejectLabel: stepConfig.next.rejectLabel,
+        accept: handleNext,
+        reject: () => {
+          // Do nothing when rejected
+        }
+      });
+    } else {
+      handleNext();
+    }
   };
 
-  const goToPreviousStep = () => {
+  const goToPreviousStep = async () => {
+    const handleGoBack = () => {
       if (state.value.currentStepIndex > 0) {
-          state.value.currentStepIndex--;
+        state.value.currentStepIndex--;
       }
+    };
+
+    const stepConfig = getCurrentStepConfig.value;
+    if (stepConfig?.previous?.enabled) {
+      confirm.require({
+        message: stepConfig.previous.message,
+        header: stepConfig.previous.header,
+        icon: 'pi pi-arrow-left',
+        acceptLabel: stepConfig.previous.acceptLabel,
+        rejectLabel: stepConfig.previous.rejectLabel,
+        accept: handleGoBack,
+        reject: () => {
+          // Do nothing when rejected
+        }
+      });
+    } else {
+      handleGoBack();
+    }
   };
 
   // Method to validate step data
@@ -214,6 +325,8 @@ export function useStepper({ initialState, stepperId }: StepperOptions) {
       // Methods
       allStepsBeforeAreValid,
 
+      globalConfig: readonly(config),
+      getCurrentStepConfig: readonly(getCurrentStepConfig),
   };
 }
 
