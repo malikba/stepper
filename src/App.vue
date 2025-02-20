@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { provide } from 'vue';
 import Stepper from './components/Stepper.vue';
+import { ConfirmationServiceKey } from './symbols';
+import { PrimeConfirmationService } from './services/PrimeConfirmationService';
+
+// Provide the confirmation service at the app level
+provide(ConfirmationServiceKey, new PrimeConfirmationService());
 </script>
 
 <template>

@@ -1,6 +1,6 @@
-import { computed, readonly, ComponentInstance } from 'vue';
+import { computed, readonly, ComponentInstance, inject } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
-import { useConfirm } from 'primevue/useconfirm';
+import { ConfirmationServiceKey } from '../symbols';
 
 interface StepperOptions {
   initialState?: StepperState;
@@ -52,8 +52,12 @@ interface StepperState {
 // TODO - handle modal config
 
 export function useStepper({ initialState, stepperId, globalConfig }: StepperOptions) {
-  const confirm = useConfirm();
+  const confirmationService = inject(ConfirmationServiceKey);
   
+  if (!confirmationService) {
+    throw new Error('ConfirmationService must be provided');
+  }
+
   const defaultGlobalConfig: Required<GlobalConfig> = {
     confirmation: {
       previous: {
@@ -155,7 +159,7 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
 
     const stepConfig = getCurrentStepConfig.value;
     if (stepConfig?.next?.enabled) {
-      confirm.require({
+      confirmationService.confirm({
         message: stepConfig.next.message,
         header: stepConfig.next.header,
         icon: 'pi pi-arrow-right',
@@ -180,7 +184,7 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
 
     const stepConfig = getCurrentStepConfig.value;
     if (stepConfig?.previous?.enabled) {
-      confirm.require({
+      confirmationService.confirm({
         message: stepConfig.previous.message,
         header: stepConfig.previous.header,
         icon: 'pi pi-arrow-left',
