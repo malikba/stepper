@@ -11,7 +11,23 @@ watch(stepData, (newData) => {
 }, { deep: true });
 
 onBeforeMount(() => {
-  registerStep({ title: 'Step 2', isValid: false });
+  registerStep({ 
+    title: 'Step 2',
+    isValid: false,
+    componentName: 'StepTwo',
+    confirmation: {
+      next: {
+        enabled: true,
+        message: 'Please confirm your selections in Step 2 before proceeding.',
+        header: 'Validate Step 2'
+      },
+      previous: {
+        enabled: true,
+        message: 'Going back will reset your Step 2 selections. Continue?',
+        header: 'Reset Warning'
+      }
+    },
+  });
   setStepData(stepData.value);
 });
 </script>

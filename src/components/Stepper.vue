@@ -19,44 +19,6 @@ const flows = {
   [Flows.FLOW3]: ["StepOne", "StepTwo"]
 };
 
-// Initial steps metadata with confirmation settings
-const initialSteps = [
-  {
-    title: 'Step 1',
-    isValid: false,
-    componentName: 'StepOne',
-    confirmation: {
-      next: {
-        enabled: true,
-        message: 'Have you filled all the required fields in Step 1?',
-        header: 'Validate Step 1'
-      }
-    }
-  },
-  {
-    title: 'Step 2',
-    isValid: false,
-    componentName: 'StepTwo',
-    confirmation: {
-      next: {
-        enabled: true,
-        message: 'Please confirm your selections in Step 2 before proceeding.',
-        header: 'Validate Step 2'
-      },
-      previous: {
-        enabled: true,
-        message: 'Going back will reset your Step 2 selections. Continue?',
-        header: 'Reset Warning'
-      }
-    }
-  },
-  {
-    title: 'Step 3',
-    isValid: false,
-    componentName: 'StepThree'
-  }
-];
-
 const { setFlows,
   getStepData,
   isStepValid,
@@ -72,29 +34,19 @@ const { setFlows,
       currentStepIndex: 0,
       currentFlowKey: Flows.FLOW1,
       flows,
-      steps: initialSteps,
+      steps: [],
       data: [],
     },
     stepperId: 'myStepper',
-    globalConfig: {
-      confirmation: {
-        next: {
-          enabled: true,
-          message: 'Are you ready to proceed to the next step?',
-          header: 'Next Step'
-        },
-        previous: {
-          enabled: true,
-          message: 'Going back will lose your changes. Continue?',
-          header: 'Previous Step'
-        }
-      }
-    }
   });
 
 const onSubmit = () => {
-  // Handle form submission
-  console.log('Form submitted:', state.data);
+  // Combine all step data into a single object (should it be a method inside useStepper?)
+  const formData = state.value.data.reduce((acc, stepData) => {
+    return { ...acc, ...stepData };
+  }, {});
+  
+  console.log('Form submitted:', formData);
 };
 </script>
 

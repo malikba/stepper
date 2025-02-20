@@ -93,12 +93,15 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
   // Merged state object containing both steps metadata and state data
   const state = useLocalStorage<StepperState>(`stepper_state_${stepperId}`, {
       currentStepIndex: initialState?.currentStepIndex ?? 0,
-      currentFlowKey: initialState?.currentFlowKey ?? null,
+      currentFlowKey: initialState?.currentFlowKey ?? Object.keys(initialState?.flows ?? {})[0] ?? null,
       steps: initialState?.steps ?? [],
       data: initialState?.data ?? [],
       flows: initialState?.flows ?? {},
   }, {
-    mergeDefaults: true
+    mergeDefaults: true,
+    deep: true,
+    listenToStorageChanges: true,
+    writeDefaults: true,
   });
 
   // Getter for currentStep
@@ -106,9 +109,13 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
 
   // Setter for currentStep
   const setCurrentStepIndex = (step: number) => {
-      if (step >= 0 && step < state.value.steps.length) {
-          state.value.currentStepIndex = step;
-      }
+    if (!state.value.currentFlowKey) {
+        throw new Error('No flow defined');
+    }
+    
+    if (step >= 0 && step < state.value.flows[state.value.currentFlowKey].length) {
+        state.value.currentStepIndex = step;
+    }
   };
 
   const setStepData = (data: Record<string, any>) => {
@@ -221,6 +228,10 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
 
 
   const isStepValid = computed(() => {
+    if (!state.value.steps[state.value.currentStepIndex]) {
+      return false;
+    }
+
     return state.value.steps[state.value.currentStepIndex].isValid;
   });
 

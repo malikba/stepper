@@ -1,6 +1,20 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useStepper } from '../useStepper'
-import { nextTick } from 'vue'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { useStepper } from '../useStepper';
+import { nextTick } from 'vue';
+
+const mockConfirmationService = {
+  confirm: vi.fn((options) => {
+    if (options.accept) options.accept();
+  })
+};
+
+vi.mock('vue', async () => {
+  const actual = await vi.importActual('vue');
+  return {
+    ...actual as any,
+    inject: () => mockConfirmationService
+  };
+});
 
 describe('useStepper', () => {
   const stepperId = 'test-stepper'
@@ -8,6 +22,7 @@ describe('useStepper', () => {
 
   beforeEach(() => {
     localStorage.clear()
+    mockConfirmationService.confirm.mockClear()
     stepper = useStepper({ stepperId })
   })
 
@@ -20,7 +35,7 @@ describe('useStepper', () => {
       expect(stepper.state.value.currentFlowKey).toBeNull()
     })
 
-    it('should initialize with provided values', () => {
+    it('should initialize with provided values and global config', () => {
       const initialState = {
         currentStepIndex: 1,
         steps: [{ title: 'Step 1', isValid: true }],
@@ -29,8 +44,81 @@ describe('useStepper', () => {
         currentFlowKey: 'default'
       }
 
-      stepper = useStepper({ initialState, stepperId })
+      const globalConfig = {
+        confirmation: {
+          next: {
+            enabled: true,
+            message: 'Custom next message'
+          }
+        }
+      }
+
+      stepper = useStepper({ initialState, stepperId, globalConfig })
       expect(stepper.state.value).toEqual(initialState)
+      const config = stepper.globalConfig
+      expect(config.confirmation.next?.message).toBe('Custom next message')
+    })
+  })
+
+  describe('navigation with confirmation', () => {
+    beforeEach(() => {
+      stepper.setFlows({ default: ['StepOne', 'StepTwo', 'StepThree'] })
+      stepper.setCurrentFlow('default')
+    })
+
+    it('should go to next step with confirmation when enabled', async () => {
+      stepper.registerStep({
+        title: 'Step 1',
+        isValid: true,
+        confirmation: {
+          next: {
+            enabled: true,
+            message: 'Confirm next?'
+          }
+        }
+      })
+
+      await stepper.goToNextStep()
+      expect(mockConfirmationService.confirm).toHaveBeenCalled()
+      expect(stepper.currentStepIndex.value).toBe(1)
+    })
+
+    it('should go to previous step with confirmation when enabled', async () => {
+      stepper.setCurrentStepIndex(1)
+      stepper.registerStep({
+        title: 'Step 2',
+        isValid: true,
+        confirmation: {
+          previous: {
+            enabled: true,
+            message: 'Confirm previous?'
+          }
+        }
+      }, 1)
+
+      await stepper.goToPreviousStep()
+      expect(mockConfirmationService.confirm).toHaveBeenCalled()
+      expect(stepper.currentStepIndex.value).toBe(0)
+    })
+
+    it('should not go to next step when confirmation is rejected', async () => {
+      mockConfirmationService.confirm.mockImplementationOnce((options) => {
+        if (options.reject) options.reject();
+      })
+
+      stepper.registerStep({
+        title: 'Step 1',
+        isValid: true,
+        confirmation: {
+          next: {
+            enabled: true
+          }
+        }
+      })
+
+      await stepper.goToNextStep()
+      expect(mockConfirmationService.confirm).toHaveBeenCalled()
+      expect(stepper.currentStepIndex.value).toBe(0)
     })
   })
 
@@ -118,7 +206,7 @@ describe('useStepper', () => {
       stepper.registerStep({ title: 'Step 2', isValid: true }, 1)
       stepper.registerStep({ title: 'Step 3', isValid: false }, 2)
       
-      await nextTick();
+      await nextTick()
       
       expect(stepper.allStepsBeforeAreValid(2)).toBe(true)
       expect(stepper.allStepsBeforeAreValid(3)).toBe(false)
@@ -160,6 +248,55 @@ describe('useStepper', () => {
       stepper.registerStep(metadata1, 0)
       stepper.registerStep(metadata2, 1)
       expect(stepper.getStepMetadata(1)).toEqual(metadata2)
+    })
+  })
+
+  describe('step configuration', () => {
+    it('should get current step configuration', () => {
+      const stepConfig = {
+        title: 'Step 1',
+        isValid: true,
+        confirmation: {
+          next: {
+            enabled: true,
+            message: 'Step specific message'
+          }
+        }
+      }
+
+      stepper.registerStep(stepConfig)
+      const config = stepper.getCurrentStepConfig.value
+      expect(config.next?.enabled).toBe(true)
+      expect(config.next?.message).toBe('Step specific message')
+    })
+
+    it('should merge global and step specific configurations', () => {
+      const globalConfig = {
+        confirmation: {
+          next: {
+            enabled: true,
+            message: 'Global message',
+            header: 'Global header'
+          }
+        }
+      }
+
+      stepper = useStepper({ stepperId, globalConfig })
+      
+      stepper.registerStep({
+        title: 'Step 1',
+        isValid: true,
+        confirmation: {
+          next: {
+            message: 'Step message'
+          }
+        }
+      })
+
+      const config = stepper.getCurrentStepConfig.value
+      expect(config.next?.enabled).toBe(true)
+      expect(config.next?.message).toBe('Step message')
+      expect(config.next?.header).toBe('Global header')
     })
   })
 }) 

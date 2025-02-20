@@ -13,7 +13,17 @@ watch(stepData, (newData) => {
 }, { deep: true });
 
 onBeforeMount(() => {
-  registerStep({ title: 'Step 1', isValid: false });
+  registerStep({ 
+      title: 'Step 1',
+      isValid: false,
+      confirmation: {
+        next: {
+          enabled: true,
+          message: 'Have you filled all the required fields in Step 1?',
+          header: 'Validate Step 1'
+        }
+      }, 
+  });
   setStepData(stepData.value);
 });
 </script>
