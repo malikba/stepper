@@ -1,30 +1,40 @@
 <script setup>
-import { ref, watch, onBeforeMount } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useStepper } from '../composables/useStepper';
 import Button from 'primevue/button';
 
-const { setCurrentFlow, setStepData, registerStep, getStepData, validateStepData } = useStepper({ stepperId: 'myStepper' });
+const { setCurrentFlow, setStepData, registerStep, getStepData, validateStepData, getStepMetadata } = useStepper({ stepperId: 'myStepper' });
 
-const stepData = ref({ name: '' });
+// Initialize stepData with existing data from the stepper or default values
+const stepData = ref(getStepData() || { name: '' });
 
-watch(stepData, (newData) => {
-  setStepData(newData);
-  validateStepData({stepIndex: 0, validationCallback: () => Object.values(getStepData()).every(value => value === "malik")});
-}, { deep: true });
+// Validation function
+const validateStep = () => stepData.value.name === "malik";
 
-onBeforeMount(() => {
-  registerStep({ 
-      title: 'Step 1',
-      isValid: false,
-      confirmation: {
-        next: {
-          enabled: true,
-          message: 'Have you filled all the required fields in Step 1?',
-          header: 'Validate Step 1'
-        }
-      }, 
-  });
+// Watch for changes and update stepper data
+const updateStepperData = () => {
   setStepData(stepData.value);
+  validateStepData({ validationCallback: validateStep });
+};
+
+// Handler for v-model updates
+const handleUpdate = () => {
+  updateStepperData();
+};
+
+onMounted(() => {
+  registerStep({ 
+    title: 'Step 1',
+    isValid: validateStep(),
+    confirmation: {
+      next: {
+        enabled: true,
+        message: 'Have you filled all the required fields in Step 1?',
+        header: 'Validate Step 1'
+      }
+    }, 
+  });
+  updateStepperData();
 });
 </script>
 
@@ -33,7 +43,8 @@ onBeforeMount(() => {
     <h2>Step 1</h2>
     <p>Specific validation for step - write "malik" in the input</p>
     <input 
-      v-model="stepData.name" 
+      v-model="stepData.name"
+      @update:model-value="handleUpdate"
       placeholder="Enter your name" 
     /><br>
     <section class="flow-buttons">

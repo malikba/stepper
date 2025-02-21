@@ -57,12 +57,15 @@ const onSubmit = () => {
     <pre>selected flow: {{ JSON.stringify(currentFlow, null, 2) }}</pre>
     <pre>{{ JSON.stringify(state.data, null, 2) }}</pre>
     <div>
-      <component :is="currentStepComponent" />
+      <template v-for="stepComponent of currentFlow" :key="stepComponent">
+        <!-- v-show is important here to avoid unmount and remount of the steps -->
+        <component :is="stepComponent" v-show="stepComponent === currentStepComponent"/>
+      </template>
     </div>
     <div class="flex justify-content-between mt-3">
       <Button 
         @click="goToPreviousStep" 
-        :disabled="isFirstStep"
+        v-if="!isFirstStep"
         label="Previous"
         severity="secondary"
       />

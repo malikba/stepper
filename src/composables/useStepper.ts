@@ -49,8 +49,6 @@ interface StepperState {
   currentFlowKey: string | null;
 }
 
-// TODO - handle modal config
-
 export function useStepper({ initialState, stepperId, globalConfig }: StepperOptions) {
   const confirmationService = inject(ConfirmationServiceKey);
   
@@ -91,17 +89,14 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
   };
 
   // Merged state object containing both steps metadata and state data
-  const state = useLocalStorage<StepperState>(`stepper_state_${stepperId}`, {
-      currentStepIndex: initialState?.currentStepIndex ?? 0,
-      currentFlowKey: initialState?.currentFlowKey ?? Object.keys(initialState?.flows ?? {})[0] ?? null,
-      steps: initialState?.steps ?? [],
-      data: initialState?.data ?? [],
-      flows: initialState?.flows ?? {},
+  const state = useLocalStorage<StepperState>(`stepper_state_${stepperId}`, initialState ?? {
+      currentStepIndex: 0,
+      currentFlowKey: null,
+      steps: [],
+      data: [],
+      flows: {},
   }, {
-    mergeDefaults: true,
     deep: true,
-    listenToStorageChanges: true,
-    writeDefaults: true,
   });
 
   // Getter for currentStep
@@ -119,7 +114,7 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
   };
 
   const setStepData = (data: Record<string, any>) => {
-      state.value.data[state.value.currentStepIndex] = {...state.value.data[state.value.currentStepIndex], ...data};
+      state.value.data[state.value.currentStepIndex] = data
   };
 
   const getStepState = (stepIndex?: number) => {
@@ -127,7 +122,7 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
   };
 
   const getStepData = (stepIndex?: number) => {
-      return state.value.data[stepIndex ?? state.value.currentStepIndex];
+    return state.value.data[stepIndex ?? state.value.currentStepIndex];
   };
 
   const getStepMetadata = (stepIndex?: number) => {
@@ -212,14 +207,14 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
       const indexToValidate = stepIndex ?? state.value.currentStepIndex;
 
       if (!state.value.steps[indexToValidate]) {
-        console.warn(`Step ${indexToValidate} not found`);
+        console.warn(`Step ${indexToValidate + 1} not found`);
         state.value.steps[indexToValidate] = {isValid: false, title: ''};
         return false;
       }
 
       if (validationCallback) {
         state.value.steps[indexToValidate].isValid = validationCallback();
-        return validationCallback();
+        return state.value.steps[indexToValidate].isValid;
       }
 
       state.value.steps[indexToValidate].isValid = state.value.data[indexToValidate] !== undefined && state.value.data[indexToValidate] !== null;
@@ -236,7 +231,7 @@ export function useStepper({ initialState, stepperId, globalConfig }: StepperOpt
   });
 
   // Method for a step to register itself
-  const registerStep = (metadata: StepMetadata, stepIndex?: number, ) => {
+  const registerStep = (metadata: StepMetadata, stepIndex?: number) => {
       if (stepIndex !== undefined && stepIndex >= 0 && stepIndex < state.value.steps.length) {
           state.value.steps[stepIndex] = metadata;
       } else {

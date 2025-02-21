@@ -23,10 +23,27 @@ describe('useStepper', () => {
   beforeEach(() => {
     localStorage.clear()
     mockConfirmationService.confirm.mockClear()
-    stepper = useStepper({ stepperId })
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    
+    // Initialize with some default values
+    const initialState = {
+      currentStepIndex: 0,
+      steps: [],
+      data: [],
+      flows: { default: ['StepOne', 'StepTwo', 'StepThree'] },
+      currentFlowKey: 'default'
+    }
+    stepper = useStepper({ stepperId, initialState })
   })
 
   describe('initialization', () => {
+    beforeEach(() => {
+      localStorage.clear()
+      mockConfirmationService.confirm.mockClear()
+      // Override with empty state for initialization tests
+      stepper = useStepper({ stepperId })
+    })
+
     it('should initialize with default values', () => {
       expect(stepper.currentStepIndex.value).toBe(0)
       expect(stepper.state.value.steps).toEqual([])
@@ -123,11 +140,6 @@ describe('useStepper', () => {
   })
 
   describe('navigation', () => {
-    beforeEach(() => {
-      stepper.setFlows({ default: ['StepOne', 'StepTwo', 'StepThree'] })
-      stepper.setCurrentFlow('default')
-    })
-
     it('should go to next step', () => {
       stepper.goToNextStep()
       expect(stepper.currentStepIndex.value).toBe(1)
@@ -158,14 +170,45 @@ describe('useStepper', () => {
       expect(stepper.getStepData()).toEqual(testData)
     })
 
-    it('should merge new data with existing data', () => {
-      stepper.setStepData({ name: 'John' })
-      stepper.setStepData({ age: 30 })
-      expect(stepper.getStepData()).toEqual({ name: 'John', age: 30 })
+    it('should store step data at current index', () => {
+      const testData1 = { name: 'John' }
+      const testData2 = { email: 'john@example.com' }
+      
+      stepper.setStepData(testData1)
+      stepper.setCurrentStepIndex(1)
+      stepper.setStepData(testData2)
+      
+      expect(stepper.getStepData(0)).toEqual(testData1)
+      expect(stepper.getStepData(1)).toEqual(testData2)
+    })
+
+    it('should get step data for specific index', () => {
+      const testData1 = { name: 'John' }
+      const testData2 = { email: 'john@example.com' }
+      
+      stepper.setStepData(testData1)
+      stepper.setCurrentStepIndex(1)
+      stepper.setStepData(testData2)
+      
+      expect(stepper.getStepData(0)).toEqual(testData1)
+      expect(stepper.getStepData()).toEqual(testData2) // Gets current step data when no index provided
+    })
+
+    it('should handle undefined or null step data', () => {
+      expect(stepper.getStepData()).toBeUndefined()
+      stepper.setStepData(null)
+      expect(stepper.getStepData()).toBeNull()
     })
   })
 
   describe('flow management', () => {
+    beforeEach(() => {
+      localStorage.clear()
+      mockConfirmationService.confirm.mockClear()
+      // Override with empty state for flow management tests
+      stepper = useStepper({ stepperId })
+    })
+
     it('should set and get flows', () => {
       const flows = { default: ['StepOne', 'StepTwo'] }
       stepper.setFlows(flows)
@@ -196,9 +239,17 @@ describe('useStepper', () => {
       expect(stepper.state.value.steps[0].isValid).toBe(true)
     })
 
+    it('should validate step with specific index', () => {
+      stepper.registerStep({ title: 'Step 2', isValid: false }, 1)
+      const validationCallback = () => true
+      expect(stepper.validateStepData({ stepIndex: 1, validationCallback })).toBe(true)
+      expect(stepper.state.value.steps[1].isValid).toBe(true)
+    })
+
     it('should validate step without callback', () => {
       stepper.setStepData({ name: 'John' })
       expect(stepper.validateStepData({})).toBe(true)
+      expect(stepper.state.value.steps[0].isValid).toBe(true)
     })
 
     it('should check if all previous steps are valid', async () => {
@@ -208,17 +259,23 @@ describe('useStepper', () => {
       
       await nextTick()
       
+      // When checking index 2, it verifies steps 0 and 1 are valid
       expect(stepper.allStepsBeforeAreValid(2)).toBe(true)
+      
+      // When checking index 1, it verifies only step 0 is valid
+      expect(stepper.allStepsBeforeAreValid(1)).toBe(true)
+      
+      // When checking index 3, it verifies steps 0, 1, and 2 are valid
       expect(stepper.allStepsBeforeAreValid(3)).toBe(false)
+    })
+
+    it('should handle validation for non-existent steps', () => {
+      expect(stepper.validateStepData({ stepIndex: 999 })).toBe(false)
+      expect(console.warn).toHaveBeenCalledWith('Step 1000 not found')
     })
   })
 
   describe('computed properties', () => {
-    beforeEach(() => {
-      stepper.setFlows({ default: ['StepOne', 'StepTwo', 'StepThree'] })
-      stepper.setCurrentFlow('default')
-    })
-
     it('should determine if current step is last', () => {
       stepper.setCurrentStepIndex(2)
       expect(stepper.isLastStep.value).toBe(true)
@@ -245,9 +302,20 @@ describe('useStepper', () => {
     it('should get step metadata for specific index', () => {
       const metadata1 = { title: 'Step 1', isValid: true }
       const metadata2 = { title: 'Step 2', isValid: false }
+      
+      // Register steps
       stepper.registerStep(metadata1, 0)
       stepper.registerStep(metadata2, 1)
-      expect(stepper.getStepMetadata(1)).toEqual(metadata2)
+
+      // Verify both steps are registered correctly
+      expect(stepper.state.value.steps[0]).toEqual(metadata1)
+      expect(stepper.state.value.steps[1]).toEqual(metadata2)
+
+      // Now test getStepMetadata
+      const retrievedMetadata = stepper.getStepMetadata(1)
+      expect(retrievedMetadata).toEqual(metadata2)
+      expect(retrievedMetadata.title).toBe('Step 2')
+      expect(retrievedMetadata.isValid).toBe(false)
     })
   })
 

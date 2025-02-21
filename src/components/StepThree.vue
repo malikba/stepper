@@ -1,25 +1,50 @@
 <script setup>
-import { ref, watch, onBeforeMount } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useStepper } from '../composables/useStepper';
 
 const { setStepData, registerStep, getStepData, validateStepData } = useStepper({ stepperId: 'myStepper' });
-const stepData = ref({ age: '' });
 
-watch(stepData, (newData) => {
-  setStepData(newData);
+// Initialize stepData with existing data from the stepper or default values
+const stepData = ref(getStepData() || { age: '' });
 
-  validateStepData({stepIndex: 2, validationCallback: () => Object.values(getStepData()).every(value => value !== "")});
-}, { deep: true });
+// Validation function
+const validateStep = () => Object.values(stepData.value).every(value => value !== "");
 
-onBeforeMount(() => {
-  registerStep({ title: 'Step 3', isValid: false });
+// Watch for changes and update stepper data
+const updateStepperData = () => {
   setStepData(stepData.value);
+  validateStepData({ stepIndex: 2, validationCallback: validateStep });
+};
+
+// Handler for v-model updates
+const handleUpdate = (newValue) => {
+  stepData.value.age = newValue;
+  updateStepperData();
+};
+
+onMounted(() => {
+  registerStep({ 
+    title: 'Step 3', 
+    isValid: validateStep(),
+    confirmation: {
+      previous: {
+        enabled: true,
+        message: 'Going back will reset your Step 3 selections. Continue?',
+        header: 'Reset Warning'
+      }
+    },
+  });
+  updateStepperData();
 });
 </script>
 
 <template>
   <div>
     <h2>Step 3</h2>
-    <input v-model="stepData.age" placeholder="Enter your age" />
+    <input 
+      v-model="stepData.age" 
+      @update:model-value="handleUpdate"
+      placeholder="Enter your age" 
+    />
   </div>
 </template>

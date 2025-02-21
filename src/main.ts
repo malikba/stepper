@@ -1,8 +1,6 @@
 import { createApp } from 'vue';
 import './style.css';
 import App from './App.vue';
-import { ConfirmationServiceKey } from './symbols';
-import { PrimeConfirmationService } from './services/PrimeConfirmationService';
 
 // Import PrimeVue and the theme
 import PrimeVue from 'primevue/config';
