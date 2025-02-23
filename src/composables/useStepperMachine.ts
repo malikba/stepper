@@ -56,17 +56,6 @@ interface StepperContext {
   config: Required<GlobalConfig>;
 }
 
-type StepperEvent =
-  | { type: 'NEXT' }
-  | { type: 'PREVIOUS' }
-  | { type: 'CONFIRM' }
-  | { type: 'REJECT' }
-  | { type: 'SET_STEP'; index: number }
-  | { type: 'SET_FLOW'; flowKey: string }
-  | { type: 'SET_DATA'; data: StepData }
-  | { type: 'REGISTER_STEP'; metadata: StepMetadata; index?: number }
-  | { type: 'VALIDATE_STEP'; index?: number; callback?: () => boolean };
-
 const createStepperMachine = (initialContext: StepperContext) => {
   return createMachine({
     /** @xstate-layout N4IgpgJg5mDOIC5QAcD2BbVFUCdYDpMBLAOzADpcAnMbPEgFwGMBiAS1oGswBrRgGwAEABQC2AZQDaABgC6iUAAdUsYrFKVEoAB6IAjAE4AzKQAsATgDMANgAcpAKwBGADQgAnogMZSAX1-m0TFx8IhJyKloGZjYOLl5+QRExCWk5RWU1DS0dPQNjU3NLGwRHFzcPL19-QKCQsIiomPjE5NT0rNz8oqKSsorqmrqG5paINo7u3v7BoZGxyenZ+cXl1fXN7d39w9PL28f359fv-6CQsIiY+KSUtMzsnLzC4tLyysrauob65paIVo6evoGRiZmFtZ2Dk4uMG5efiEBEJRBIpLJ5EoVOoNFodHoDEZTOYrDY7I5XB4vL4-AEQmFIjE4olkqk0pkctl8oUSpVqrVGi02h0uj1+oNhqMJlNZgtlmtNjs9kcTmcLlcbndHi83h8vj9-kDQeDIVCYXDEciUWiMVjcfiCUSScTyZTqbS6QyWUz2ZyeXyBUKRWLJdK5QqVWqNVqdXqjSazVa7U63V6-UGwxG4ymMzmC2Wqw2Wz2hy2p3OF2udy+D2+vz+gOBIOh4IR8KRqPRmOxuPxhKJJLJFKpdMZzNZHK5vP5gsF4slMrlCqVKrVWr1RpNZqtdodLrdXr9QbDUbjSbTWbzRarDbbXaHY6nc7XW73R6vT7fX7-QGg8GQmHwhFI5Go9GYnF4wkksnUunMlmsjl8wXCoUSqUy+WKpWqjXajW63X6w3G03mi1Wm12h1O11e70+v0B4NhiNRmPxpOp9OZrM53OF4ul8uVqs12t1hs95tN1tt9sdztdns9vv9gcDwdD4cj0fjieTqfTmezufzheLpfLler9cbzdbne7vf7w+H4+nk9ny-Xm+32-3x9P58v19vj-fz8-n6-P9-f7+v3--4AAA */
@@ -99,7 +88,7 @@ const createStepperMachine = (initialContext: StepperContext) => {
             actions: ['registerStep']
           },
           VALIDATE_STEP: {
-            actions: ['validateStep']
+            actions: ['validateStep'],
           }
         }
       },
@@ -205,7 +194,9 @@ const createStepperMachine = (initialContext: StepperContext) => {
           const { index, callback } = event;
           const indexToValidate = typeof index === 'number' ? index : context.state.currentStepIndex;
 
-          if (!context.state.steps[indexToValidate]) {
+          if (!context.state.steps[indexToValidate]
+            && context.state.currentFlowKey
+            && !context.state.flows[context.state.currentFlowKey]?.at(indexToValidate)) {
             console.warn(`Step ${indexToValidate + 1} not found`);
             context.state.steps[indexToValidate] = { isValid: false, title: '' };
             return;
