@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import Button from 'primevue/button';
-import { computed, watch, defineComponent } from 'vue';
-import { useStepper } from '../composables/useStepper';
+import StepperWrapper from './StepperWrapper.vue';
+import StepperConfirmDialog from './StepperConfirmDialog.vue';
 import StepOne from './StepOne.vue';
 import StepTwo from './StepTwo.vue';
 import StepThree from './StepThree.vue';
-import StepperConfirmDialog from './StepperConfirmDialog.vue';
 
 enum Flows {
   FLOW1 = 'flow1',
@@ -19,33 +17,7 @@ const flows = {
   [Flows.FLOW3]: ["StepOne", "StepTwo"]
 };
 
-const { setFlows,
-  getStepData,
-  isStepValid,
-  currentStepComponent,
-  currentFlow,
-  goToNextStep,
-  goToPreviousStep,
-  isLastStep,
-  isFirstStep,
-  state,
-  getCurrentStepConfig } = useStepper({
-    initialState: {
-      currentStepIndex: 0,
-      currentFlowKey: Flows.FLOW1,
-      flows,
-      steps: [],
-      data: [],
-    },
-    stepperId: 'myStepper',
-  });
-
-const onSubmit = () => {
-  // Combine all step data into a single object (should it be a method inside useStepper?)
-  const formData = state.value.data.reduce((acc, stepData) => {
-    return { ...acc, ...stepData };
-  }, {});
-  
+const onSubmit = (formData: Record<string, any>) => {
   console.log('Form submitted:', formData);
 };
 </script>
@@ -54,38 +26,17 @@ const onSubmit = () => {
   <section>
     <StepperConfirmDialog position="top" />
 
-    <pre>selected flow: {{ JSON.stringify(currentFlow, null, 2) }}</pre>
-    <pre>{{ JSON.stringify(state.data, null, 2) }}</pre>
-    <div>
-      <template v-for="stepComponent of currentFlow" :key="stepComponent">
-        <!-- v-show is important here to avoid unmount and remount of the steps -->
-        <component :is="stepComponent" v-show="stepComponent === currentStepComponent"/>
+    <StepperWrapper
+      stepper-id="myStepper"
+      :flows="flows"
+      :initial-flow-key="Flows.FLOW1"
+      @submit="onSubmit"
+    >
+      <template #header="{ currentFlow, state }">
+        <pre>selected flow: {{ JSON.stringify(currentFlow, null, 2) }}</pre>
+        <pre>{{ JSON.stringify(state.data, null, 2) }}</pre>
       </template>
-    </div>
-    <div class="flex justify-content-between mt-3">
-      <Button 
-        @click="goToPreviousStep" 
-        v-if="!isFirstStep"
-        label="Previous"
-        severity="secondary"
-      />
-      <Button 
-        @click="goToNextStep"
-        v-if="!isLastStep"
-        :disabled="isLastStep || !isStepValid"
-        label="Next"
-        severity="secondary"
-        outlined
-      />
-      <Button 
-        @click="onSubmit" 
-        :disabled="!isLastStep || !isStepValid"
-        severity="success"
-        label="Submit"
-        outlined
-      />
-      
-    </div>
+    </StepperWrapper>
   </section>
 </template>
 

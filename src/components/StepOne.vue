@@ -1,58 +1,45 @@
-<script setup>
-import { ref, onMounted } from 'vue';
+<script setup lang="ts">
 import { useStepper } from '../composables/useStepper';
-import Button from 'primevue/button';
+import StepWrapper from './StepWrapper.vue';
 
-const { setCurrentFlow, setStepData, registerStep, getStepData, validateStepData, getStepMetadata } = useStepper({ stepperId: 'myStepper' });
+const { setCurrentFlow } = useStepper({ stepperId: 'myStepper' });
 
-// Initialize stepData with existing data from the stepper or default values
-const stepData = ref(getStepData() || { name: '' });
+const validateStep = (data: { name: string }) => data.name === "malik";
 
-// Validation function
-const validateStep = () => stepData.value.name === "malik";
-
-// Watch for changes and update stepper data
-const updateStepperData = () => {
-  setStepData(stepData.value);
-  validateStepData({ validationCallback: validateStep });
+const stepConfig = {
+  title: 'Step 1',
+  confirmation: {
+    next: {
+      enabled: true,
+      message: 'Have you filled all the required fields in Step 1?',
+      header: 'Validate Step 1'
+    }
+  }
 };
-
-// Handler for v-model updates
-const handleUpdate = () => {
-  updateStepperData();
-};
-
-onMounted(() => {
-  registerStep({ 
-    title: 'Step 1',
-    isValid: validateStep(),
-    confirmation: {
-      next: {
-        enabled: true,
-        message: 'Have you filled all the required fields in Step 1?',
-        header: 'Validate Step 1'
-      }
-    }, 
-  });
-  updateStepperData();
-});
 </script>
 
 <template>
-  <div>
-    <h2>Step 1</h2>
-    <p>Specific validation for step - write "malik" in the input</p>
-    <input 
-      v-model="stepData.name"
-      @update:model-value="handleUpdate"
-      placeholder="Enter your name" 
-    /><br>
-    <section class="flow-buttons">
-      <div class="flow-button" @click="setCurrentFlow('flow1')">select flow 1</div><br>
-      <div class="flow-button" @click="setCurrentFlow('flow2')">select flow 2</div><br>
-      <div class="flow-button" @click="setCurrentFlow('flow3')">select flow 3</div><br>
-    </section>
-  </div>
+  <StepWrapper
+    stepper-id="myStepper"
+    :validation="validateStep"
+    :step-config="stepConfig"
+    :initial-data="{ name: '' }"
+    v-slot="{ data }"
+  >
+    <div>
+      <h2>Step 1</h2>
+      <p>Specific validation for step - write "malik" in the input</p>
+      <input 
+        v-model="data.name"
+        placeholder="Enter your name" 
+      /><br>
+      <section class="flow-buttons">
+        <div class="flow-button" @click="setCurrentFlow('flow1')">select flow 1</div><br>
+        <div class="flow-button" @click="setCurrentFlow('flow2')">select flow 2</div><br>
+        <div class="flow-button" @click="setCurrentFlow('flow3')">select flow 3</div><br>
+      </section>
+    </div>
+  </StepWrapper>
 </template>
 
 <style scoped>
